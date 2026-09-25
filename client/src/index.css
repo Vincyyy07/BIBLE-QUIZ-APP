@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-navy m-0 p-0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold leading-tight;
+  }
+}
+
+@layer components {
+  /* ── Buttons ─────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-lg
+           transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500
+           px-5 py-2.5 text-sm;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-navy border border-border hover:bg-slate-50 focus:ring-primary-500
+           px-5 py-2.5 text-sm;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-700 focus:ring-red-500
+           px-5 py-2.5 text-sm;
+  }
+  .btn-success {
+    @apply btn bg-success text-white hover:bg-green-700 focus:ring-green-500
+           px-5 py-2.5 text-sm;
+  }
+  .btn-lg {
+    @apply px-8 py-3.5 text-base;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-icon {
+    @apply btn bg-white border border-border text-muted hover:text-navy hover:bg-slate-50
+           p-2 rounded-lg focus:ring-primary-500;
+  }
+
+  /* ── Cards ───────────────────────────────────── */
+  .card {
+    @apply bg-white border border-border rounded-xl shadow-sm p-6;
+  }
+  .card-sm {
+    @apply bg-white border border-border rounded-lg shadow-sm p-4;
+  }
+
+  /* ── Inputs ──────────────────────────────────── */
+  .input {
+    @apply w-full border border-border rounded-lg px-3.5 py-2.5 text-sm text-navy
+           placeholder:text-muted bg-white
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           transition-colors duration-150;
+  }
+  .input-error {
+    @apply border-danger focus:ring-danger;
+  }
+  .label {
+    @apply block text-sm font-medium text-navy mb-1.5;
+  }
+  .select {
+    @apply input pr-8 cursor-pointer;
+  }
+
+  /* ── Badges ──────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+  .badge-blue   { @apply badge bg-primary-100 text-primary-700; }
+  .badge-green  { @apply badge bg-green-100 text-green-700; }
+  .badge-yellow { @apply badge bg-yellow-100 text-yellow-700; }
+  .badge-red    { @apply badge bg-red-100 text-red-700; }
+  .badge-gray   { @apply badge bg-slate-100 text-slate-600; }
+
+  /* ── Answer option buttons (participant) ─────── */
+  .answer-btn {
+    @apply w-full text-left font-semibold rounded-xl border-2 border-border bg-white
+           transition-all duration-150 cursor-pointer select-none
+           focus:outline-none focus:ring-2 focus:ring-primary-500
+           active:scale-[0.98];
+  }
+  .answer-btn:hover:not(:disabled) {
+    @apply border-primary-500 bg-primary-50;
+  }
+  .answer-btn.selected {
+    @apply border-primary-600 bg-primary-600 text-white;
+  }
+  .answer-btn.correct {
+    @apply border-success bg-green-600 text-white;
+  }
+  .answer-btn.incorrect {
+    @apply border-danger bg-red-600 text-white;
+  }
+  .answer-btn:disabled {
+    @apply cursor-not-allowed;
+  }
+
+  /* ── Connection status dot ───────────────────── */
+  .conn-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+  .conn-dot.connected    { @apply bg-success; }
+  .conn-dot.reconnecting { @apply bg-warning animate-pulse; }
+  .conn-dot.disconnected { @apply bg-danger; }
+
+  /* ── Timer ring ──────────────────────────────── */
+  .timer-urgent { @apply text-danger; }
+  .timer-warn   { @apply text-warning; }
+  .timer-ok     { @apply text-success; }
+
+  /* ── Projector / display styles ──────────────── */
+  .projector-layout {
+    @apply min-h-screen bg-white flex flex-col;
+  }
+  .projector-header {
+    @apply bg-primary-600 text-white px-12 py-5 flex items-center justify-between;
+  }
+  .projector-question-text {
+    @apply text-4xl font-bold text-navy leading-tight text-center;
+  }
+  .projector-option {
+    @apply flex items-center gap-4 border-2 border-border rounded-xl p-5 bg-white
+           text-2xl font-semibold text-navy;
+  }
+  .projector-option-label {
+    @apply w-10 h-10 rounded-lg bg-primary-600 text-white flex items-center justify-center
+           text-xl font-bold flex-shrink-0;
+  }
+
+  /* ── Leaderboard rows ────────────────────────── */
+  .lb-row {
+    @apply flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-0;
+  }
+  .lb-rank {
+    @apply w-8 text-center font-bold text-muted text-sm;
+  }
+  .lb-name {
+    @apply flex-1 font-medium text-navy truncate;
+  }
+  .lb-score {
+    @apply font-bold text-primary-600 tabular-nums;
+  }
+
+  /* ── Animations ──────────────────────────────── */
+  .animate-fade-in  { animation: fadeIn 0.3s ease-in-out; }
+  .animate-slide-up { animation: slideUp 0.3s ease-out; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
+
+/* Projector full-screen overrides */
+.projector-fullscreen {
+  aspect-ratio: 16/9;
+  width: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+}

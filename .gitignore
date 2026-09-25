@@ -1,0 +1,34 @@
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+server/.env
+client/.env
+client/.env.local
+client/.env.production
+
+# ── Dependencies ──
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# ── Build Outputs ──
+dist/
+client/dist/
+build/
+
+# ── Logs ──
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# ── OS & Editor Files ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
