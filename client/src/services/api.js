@@ -3,7 +3,7 @@ import axios from 'axios';
 const getBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
+    return `(\.location.hostname === 'localhost' || \.location.hostname === '127.0.0.1') ? \$//\$:3001 : window.location.origin`;
   }
   return 'http://localhost:3001';
 };
