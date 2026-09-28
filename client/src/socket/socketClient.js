@@ -1,13 +1,14 @@
-﻿import { io } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 const getSocketUrl = () => {
-  let url = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL;
+  let url = (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || '').trim();
   if (url) {
-    url = url.trim().replace(/\/+$/, '');
+    url = url.replace(/\/+$/, '');
+    url = url.replace(/\/api$/, '');
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = `https://${url}`;
     }
-    if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
+    if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://') && !url.includes('localhost') && !url.includes('127.0.0.1')) {
       url = url.replace('http://', 'https://');
     }
     return url;
@@ -16,7 +17,7 @@ const getSocketUrl = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return `${window.location.protocol}//${window.location.hostname}:3001`;
     }
-    return window.location.origin;
+    return 'https://server-production-0c3b.up.railway.app';
   }
   return 'http://localhost:3001';
 };

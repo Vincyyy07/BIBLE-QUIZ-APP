@@ -27,50 +27,71 @@ function getLocalIpAddress() {
   return 'localhost';
 }
 
+// Trust reverse proxy (Railway edge)
+app.set('trust proxy', 1);
+
 // ── Middleware ──────────────────────────────────────────────
-// Allow requests from localhost and phones connected to the same Wi-Fi/LAN
+// Allow requests from all origins (Railway client domain, localhost, mobile devices)
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
 }));
+app.options('*', cors());
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Request logging for production visibility in Railway
+app.use((req, res, next) => {
+  logger.info(`[${req.method}] ${req.originalUrl}`);
+  next();
+});
+
 app.use('/api', apiLimiter);
 
 // ── Network Info Endpoint for QR code generation ──────────
-app.get('/api/network-info', (req, res) => {
+const networkHandler = (req, res) => {
   const ip = getLocalIpAddress();
   res.json({
     ip,
     port: 5173,
     joinUrl: `http://${ip}:5173/join`,
   });
-});
+};
+app.get('/api/network-info', networkHandler);
+app.get('/network-info', networkHandler);
 
-// ── Routes ──────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api/quizzes', quizRoutes);
-app.use('/api/questions', questionRoutes);
+// ── Routes (Flexible prefixes to handle /api, root, and double /api/api) ────
+app.use(['/api/auth', '/auth', '/api/api/auth'], authRoutes);
+app.use(['/api/quizzes', '/quizzes', '/api/api/quizzes'], quizRoutes);
+app.use(['/api/questions', '/questions', '/api/api/questions'], questionRoutes);
 
-app.get('/api/health', async (req, res) => {
+const healthHandler = async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
   } catch {
     res.status(503).json({ status: 'error', db: 'disconnected' });
   }
-});
+};
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
 
-// 404 handler
+// 404 handler with detailed error info
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  logger.warn(`404 Route Not Found: [${req.method}] ${req.originalUrl}`);
+  res.status(404).json({
+    error: `Route not found: [${req.method}] ${req.originalUrl}`,
+    hint: 'Check requested path and HTTP method.'
+  });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  logger.error('Unhandled error', { error: err.message, stack: err.stack });
-  res.status(500).json({ error: 'Internal server error' });
+  logger.error('Unhandled error', { error: err.message, stack: err.stack, path: req.originalUrl });
+  res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 // ── Socket.IO ───────────────────────────────────────────────
