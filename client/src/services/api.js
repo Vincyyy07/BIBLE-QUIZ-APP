@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const getBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
@@ -60,3 +60,4 @@ export const exportResults = (quizId) =>
 export const getNetworkInfo = () => api.get('/network-info');
 
 export default api;
+

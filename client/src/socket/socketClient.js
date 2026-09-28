@@ -1,9 +1,13 @@
-import { io } from 'socket.io-client';
+﻿import { io } from 'socket.io-client';
 
 const getSocketUrl = () => {
   if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return `${window.location.protocol}//${window.location.hostname}:3001`;
+    }
+    return window.location.origin;
   }
   return 'http://localhost:3001';
 };
@@ -22,11 +26,11 @@ const socket = io(SOCKET_URL, {
 });
 
 export const EVENTS = {
-  // Client → Server (player)
+  // Client â†’ Server (player)
   JOIN_QUIZ:          'join_quiz',
   SUBMIT_ANSWER:      'submit_answer',
   RECONNECT_SESSION:  'reconnect_session',
-  // Client → Server (host)
+  // Client â†’ Server (host)
   HOST_JOIN:          'host_join',
   START_QUIZ:         'start_quiz',
   NEXT_QUESTION:      'next_question',
@@ -36,7 +40,7 @@ export const EVENTS = {
   RESTART_QUESTION:   'restart_question',
   // Display
   DISPLAY_JOIN:       'display_join',
-  // Server → Client
+  // Server â†’ Client
   JOINED:             'joined',
   PARTICIPANT_JOINED: 'participant_joined',
   PARTICIPANT_COUNT:  'participant_count',
@@ -55,3 +59,4 @@ export const EVENTS = {
 };
 
 export default socket;
+
