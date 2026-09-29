@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Footer from '../components/common/Footer';
 
 export default function HostAuthPage() {
   const { login, register } = useAuth();
@@ -40,8 +41,9 @@ export default function HostAuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-surface flex flex-col justify-between">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-md mx-auto">
+        <div className="w-full">
         {/* Logo & Platform Header */}
         <div className="text-center mb-6">
           <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -173,6 +175,9 @@ export default function HostAuthPage() {
           </div>
         </div>
       </div>
+      </div>
+
+      <Footer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../common/Modal';
 import { useAuth } from '../../context/AuthContext';
+import Footer from '../common/Footer';
 
 const statusBadge = (status) => {
   switch (status) {
@@ -122,9 +123,9 @@ const QuizDashboard = ({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Metric Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Metric Bar (2 columns on mobile, 4 on desktop) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="card p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-muted uppercase tracking-wider">Total Quizzes</p>
@@ -318,6 +319,8 @@ const QuizDashboard = ({
           </div>
         )}
       </main>
+
+      <Footer />
 
       {/* Create Quiz Modal */}
       <Modal

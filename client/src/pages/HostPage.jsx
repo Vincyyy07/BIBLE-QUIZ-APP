@@ -19,6 +19,7 @@ import HostPresentMode from '../components/host/HostPresentMode';
 import HostAuthPage from './HostAuthPage';
 import { useAuth } from '../context/AuthContext';
 import { downloadBlob } from '../utils/helpers';
+import Footer from '../components/common/Footer';
 
 const TIMER_OPTIONS = [10, 15, 20, 30, 45, 60];
 
@@ -38,6 +39,7 @@ const HostPage = () => {
   const [view, setView] = useState('dashboard');
   // views: dashboard | setup | lobby | live | results
   const [presentMode, setPresentMode] = useState(false);
+  const [mobileTab, setMobileTab] = useState('editor'); // 'list' | 'editor' on mobile screens
 
   // Quizzes list for Dashboard
   const [quizzes, setQuizzes] = useState([]);
@@ -497,8 +499,8 @@ const HostPage = () => {
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       {/* Top Breadcrumbs Bar (Dashboard > Quiz Title (Edit) > Lobby) */}
-      <header className="bg-white border-b border-border px-6 py-2.5 flex items-center justify-between text-xs sm:text-sm sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-2 overflow-x-auto py-1">
+      <header className="bg-white border-b border-border px-4 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 whitespace-nowrap">
           <button
             onClick={handleBackToDashboard}
             className="text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
@@ -507,8 +509,8 @@ const HostPage = () => {
             <span>🏠</span> Dashboard
           </button>
           <span className="text-slate-400 font-bold">/</span>
-          <span className="text-navy font-bold flex items-center gap-1">
-            <span>✏️</span> {quiz.title} (Edit Questions)
+          <span className="text-navy font-bold flex items-center gap-1 truncate max-w-[150px] sm:max-w-none">
+            <span>✏️</span> {quiz.title}
           </span>
           <span className="text-slate-400">/</span>
           <button
@@ -521,16 +523,16 @@ const HostPage = () => {
             }`}
             title="Move to Starting the Quiz"
           >
-            <span>📢</span> Starting Quiz (Lobby)
+            <span>📢</span> Lobby
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <button
             onClick={handleBackToDashboard}
             className="btn-secondary btn-sm text-xs flex items-center gap-1"
           >
-            <span>←</span> Back to Dashboard
+            <span>←</span> Dashboard
           </button>
           <button
             id="btn-top-open-lobby"
@@ -538,15 +540,41 @@ const HostPage = () => {
             disabled={questions.length === 0}
             className="btn-primary btn-sm text-xs font-semibold shadow-sm"
           >
-            Starting Quiz (Lobby) →
+            Start / Lobby →
           </button>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      {/* Mobile Tab Switcher for Setup (Screen < 768px) */}
+      <div className="md:hidden flex bg-slate-100 p-1.5 border-b border-border">
+        <button
+          onClick={() => setMobileTab('list')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+            mobileTab === 'list'
+              ? 'bg-white text-navy shadow-sm'
+              : 'text-muted hover:text-navy'
+          }`}
+        >
+          📋 Questions List ({questions.length})
+        </button>
+        <button
+          onClick={() => setMobileTab('editor')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+            mobileTab === 'editor'
+              ? 'bg-white text-navy shadow-sm'
+              : 'text-muted hover:text-navy'
+          }`}
+        >
+          ✏️ Question Editor
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-72 bg-white border-r border-border flex flex-col h-[calc(100vh-45px)] sticky top-[45px]">
-          <div className="p-5 border-b border-border">
+        <aside className={`w-full md:w-72 bg-white md:border-r border-border flex-col md:h-[calc(100vh-45px)] md:sticky md:top-[45px] ${
+          mobileTab === 'list' ? 'flex' : 'hidden md:flex'
+        }`}>
+          <div className="p-4 sm:p-5 border-b border-border">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 bg-primary-600 rounded-md flex items-center justify-center">
                 <span className="text-white text-xs font-bold">BQ</span>
@@ -559,7 +587,7 @@ const HostPage = () => {
             </div>
           </div>
 
-          <div className="p-4 flex-1 overflow-y-auto">
+          <div className="p-3 sm:p-4 flex-1 overflow-y-auto max-h-[50vh] md:max-h-none">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
               Questions ({questions.length})
             </p>
@@ -569,10 +597,12 @@ const HostPage = () => {
               onSelect={(idx) => {
                 setSelectedQIdx(idx);
                 setEditingQuestion(questions[idx]);
+                setMobileTab('editor');
               }}
               onAdd={() => {
                 setEditingQuestion({ ...DEFAULT_QUESTION });
                 setSelectedQIdx(questions.length);
+                setMobileTab('editor');
               }}
               onDelete={(id) => setDeleteModal({ open: true, id })}
               onDuplicate={handleDuplicate}
@@ -594,13 +624,15 @@ const HostPage = () => {
         </aside>
 
         {/* Main Editor */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-8 py-8">
+        <main className={`flex-1 overflow-y-auto ${
+          mobileTab === 'editor' ? 'block' : 'hidden md:block'
+        }`}>
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
               <div>
-                <h1 className="text-2xl font-bold text-navy">{quiz.title}</h1>
-                {quiz.description && <p className="text-muted text-sm mt-1">{quiz.description}</p>}
+                <h1 className="text-xl sm:text-2xl font-bold text-navy">{quiz.title}</h1>
+                {quiz.description && <p className="text-muted text-xs sm:text-sm mt-1">{quiz.description}</p>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="badge badge-blue">
@@ -626,7 +658,10 @@ const HostPage = () => {
                 questionNumber={selectedQIdx + 1}
                 totalQuestions={questions.length}
                 timerOptions={TIMER_OPTIONS}
-                onSave={handleSaveQuestion}
+                onSave={async (data) => {
+                  await handleSaveQuestion(data);
+                  setMobileTab('list');
+                }}
                 onCancel={() => setEditingQuestion(null)}
                 onDelete={
                   editingQuestion?.id
@@ -636,12 +671,12 @@ const HostPage = () => {
                 saving={saving}
               />
             ) : (
-              <div className="card text-center py-16">
-                <div className="text-5xl mb-4">✝</div>
-                <h2 className="text-xl font-semibold text-navy mb-2">
+              <div className="card text-center py-12 sm:py-16">
+                <div className="text-4xl sm:text-5xl mb-4">✝</div>
+                <h2 className="text-lg sm:text-xl font-semibold text-navy mb-2">
                   {questions.length === 0 ? 'Add Your First Question' : 'Select or Add a Question'}
                 </h2>
-                <p className="text-muted text-sm mb-6 max-w-md mx-auto">
+                <p className="text-muted text-xs sm:text-sm mb-6 max-w-md mx-auto">
                   {questions.length === 0
                     ? 'Build your Bible quiz by clicking the button below or using the question list.'
                     : 'Click a question in the list to edit its prompt, options, and points, or click below to add another question.'}
@@ -661,6 +696,8 @@ const HostPage = () => {
           </div>
         </main>
       </div>
+
+      <Footer />
 
       {/* Delete Question Confirmation Modal */}
       <Modal

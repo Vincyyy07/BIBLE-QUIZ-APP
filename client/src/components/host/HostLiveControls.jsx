@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useTimer from '../../hooks/useTimer';
 import Modal from '../common/Modal';
 import socket, { EVENTS } from '../../socket/socketClient';
+import Footer from '../common/Footer';
 
 const RankMovementBadge = ({ rankChange, previousRank }) => {
   if (previousRank === null || previousRank === undefined) {
@@ -539,6 +540,8 @@ const HostLiveControls = ({
           </div>
         </section>
       </main>
+
+      <Footer />
 
       {/* End Quiz Modal */}
       <Modal open={endModal} title="End Quiz?" onClose={() => setEndModal(false)} danger>

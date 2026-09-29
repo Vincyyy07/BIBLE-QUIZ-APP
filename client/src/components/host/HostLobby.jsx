@@ -1,10 +1,12 @@
 import ConnectionStatus from '../common/ConnectionStatus';
 import QRCodeCard from '../common/QRCodeCard';
+import Footer from '../common/Footer';
 
 const HostLobby = ({ quiz, participantCount, questions, onStart, onBack, onEnterPresentMode, onBackToDashboard }) => {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen bg-surface flex flex-col justify-between">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-3xl">
         {/* Header */}
         <div className="text-center mb-6">
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-1">HOST CONTROL</p>
@@ -76,40 +78,45 @@ const HostLobby = ({ quiz, participantCount, questions, onStart, onBack, onEnter
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
-          {onBackToDashboard && (
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+          <div className="flex gap-2 w-full sm:w-auto">
+            {onBackToDashboard && (
+              <button
+                onClick={onBackToDashboard}
+                className="btn-secondary flex-1 sm:flex-initial"
+                id="btn-lobby-dashboard"
+              >
+                🏠 Dashboard
+              </button>
+            )}
             <button
-              onClick={onBackToDashboard}
-              className="btn-secondary flex-shrink-0"
-              id="btn-lobby-dashboard"
+              onClick={onBack}
+              className="btn-secondary flex-1 sm:flex-initial"
             >
-              🏠 Dashboard
+              ← Edit Questions
             </button>
-          )}
-          <button
-            onClick={onBack}
-            className="btn-secondary flex-shrink-0"
-          >
-            ← Edit Questions
-          </button>
+          </div>
           <button
             id="btn-start-quiz"
             onClick={onStart}
             disabled={participantCount === 0}
-            className="btn-success btn-lg flex-1"
+            className="btn-success btn-lg flex-1 w-full font-bold shadow-md"
           >
             {participantCount === 0
               ? 'Waiting for participants…'
-              : `Start Quiz with ${participantCount} participant${participantCount !== 1 ? 's' : ''}`}
+              : `Start Quiz (${participantCount} player${participantCount !== 1 ? 's' : ''}) →`}
           </button>
         </div>
 
         {participantCount === 0 && (
           <p className="text-center text-xs text-muted mt-3">
-            The Start button will enable once participants join
+            The Start button will enable automatically once participants join
           </p>
         )}
       </div>
+      </div>
+
+      <Footer />
     </div>
   );
 };

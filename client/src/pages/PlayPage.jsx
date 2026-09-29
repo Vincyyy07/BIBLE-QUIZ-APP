@@ -5,6 +5,7 @@ import useSocket from '../hooks/useSocket';
 import TimerDisplay from '../components/player/TimerDisplay';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { getOrdinal } from '../utils/helpers';
+import Footer from '../components/common/Footer';
 
 const VIEWS = {
   CONNECTING: 'connecting',
@@ -243,8 +244,11 @@ const PlayPage = () => {
 
 // ── Sub-components ─────────────────────────────
 const CenteredScreen = ({ children }) => (
-  <div className="min-h-screen bg-surface flex items-center justify-center p-4">
-    {children}
+  <div className="min-h-screen bg-surface flex flex-col justify-between">
+    <div className="flex-1 flex items-center justify-center p-4">
+      {children}
+    </div>
+    <Footer />
   </div>
 );
 
@@ -272,147 +276,161 @@ const QuestionScreen = ({ question, selectedOption, onAnswer, paused, view, name
     : [['A', question.optionA], ['B', question.optionB], ['C', question.optionC], ['D', question.optionD]];
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col">
-      {/* Top bar */}
-      <div className="bg-primary-600 text-white px-4 py-2.5 flex items-center justify-between flex-shrink-0 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">
-            Q{question.questionNumber}/{question.totalQuestions}
-          </span>
-          <span className="font-semibold text-sm truncate max-w-[110px] sm:max-w-none">{name}</span>
+    <div className="min-h-screen bg-surface flex flex-col justify-between">
+      <div>
+        {/* Top bar with sticky mobile header */}
+        <div className="bg-primary-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between flex-shrink-0 shadow-sm sticky top-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">
+              Q{question.questionNumber}/{question.totalQuestions}
+            </span>
+            <span className="font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{name}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Small box in header for position */}
+            {myRank?.rank ? (
+              <div className="bg-white/20 border border-white/30 rounded-lg px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 text-xs font-bold shadow-xs animate-fade-in">
+                <span>{myRank.rank === 1 ? '🥇' : myRank.rank === 2 ? '🥈' : myRank.rank === 3 ? '🥉' : '🏆'}</span>
+                <span>{getOrdinal(myRank.rank)}</span>
+                <span className="text-white/40">|</span>
+                <span className="text-amber-200 font-extrabold">{myRank.total_score} pts</span>
+              </div>
+            ) : null}
+            <ConnectionStatus className="text-white opacity-90 text-xs" />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Small box in header for position */}
-          {myRank?.rank ? (
-            <div className="bg-white/20 border border-white/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5 text-xs font-bold shadow-sm animate-fade-in">
-              <span>{myRank.rank === 1 ? '🥇' : myRank.rank === 2 ? '🥈' : myRank.rank === 3 ? '🥉' : '🏆'}</span>
-              <span>{getOrdinal(myRank.rank)}</span>
-              <span className="text-white/40">|</span>
-              <span className="text-amber-200 font-extrabold">{myRank.total_score} pts</span>
+        <div className="flex-1 flex flex-col px-3 sm:px-4 py-4 sm:py-5 max-w-lg mx-auto w-full">
+          {/* Timer + paused */}
+          <div className="flex justify-center mb-4 sm:mb-5">
+            {paused ? (
+              <div className="flex items-center gap-2 text-warning font-semibold text-sm">
+                ⏸ Quiz paused by host
+              </div>
+            ) : question.ended ? (
+              <div className="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-full text-xs sm:text-sm border border-slate-300">
+                {question.allAnswered ? '✓ All Players Answered' : "⌛ Time's Up"}
+              </div>
+            ) : (
+              <TimerDisplay endsAt={question.endsAt} />
+            )}
+          </div>
+
+          {/* Question text */}
+          <div className="card mb-4 sm:mb-5 p-4 sm:p-6 flex-shrink-0 shadow-sm border border-border/80">
+            <p className="text-base sm:text-lg font-bold text-navy leading-snug text-center">
+              {question.questionText}
+            </p>
+          </div>
+
+          {/* Answer options (large touch targets for mobile thumb tapping) */}
+          <div className="space-y-2.5 sm:space-y-3 flex-1">
+            {options.map(([key, text]) => {
+              const isSelected = selectedOption === key;
+              const disabled = !!selectedOption || question.ended;
+
+              return (
+                <button
+                  key={key}
+                  id={`answer-btn-${key}`}
+                  onClick={() => onAnswer(key)}
+                  disabled={disabled}
+                  className={`answer-btn p-3.5 sm:p-4 text-sm sm:text-base font-semibold min-h-[52px] sm:min-h-[56px] ${
+                    isSelected ? 'selected' : ''
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 transition-transform ${
+                      isSelected ? 'bg-white/20 text-white scale-105' : 'bg-slate-100 text-navy'}`}>
+                      {key}
+                    </span>
+                    <span className="text-left flex-1 break-words">{text}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Status banner */}
+          {question.ended ? (
+            <div className="mt-4 sm:mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-center animate-fade-in shadow-xs">
+              <div className="flex items-center justify-center gap-2 text-navy font-bold text-sm mb-1">
+                <span>✓</span>
+                <span>Question completed</span>
+              </div>
+              <p className="text-xs text-muted mb-3 font-medium">
+                Waiting for host to start next question…
+              </p>
+              <div className="flex justify-center">
+                <LoadingDots />
+              </div>
+            </div>
+          ) : selectedOption ? (
+            <div className="mt-4 text-center animate-fade-in">
+              <div className="inline-flex items-center gap-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold shadow-2xs">
+                <span>✓</span>
+                <span>Answer locked in — waiting for round to conclude…</span>
+              </div>
             </div>
           ) : null}
-          <ConnectionStatus className="text-white opacity-90" />
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col px-4 py-5 max-w-lg mx-auto w-full">
-        {/* Timer + paused */}
-        <div className="flex justify-center mb-5">
-          {paused ? (
-            <div className="flex items-center gap-2 text-warning font-semibold">
-              ⏸ Quiz paused
-            </div>
-          ) : question.ended ? (
-            <div className="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-full text-sm border border-slate-300">
-              {question.allAnswered ? '✓ All Players Answered' : "⌛ Time's Up"}
-            </div>
-          ) : (
-            <TimerDisplay endsAt={question.endsAt} />
-          )}
-        </div>
-
-        {/* Question text */}
-        <div className="card mb-5 flex-shrink-0">
-          <p className="text-base font-semibold text-navy leading-snug text-center">
-            {question.questionText}
-          </p>
-        </div>
-
-        {/* Answer options */}
-        <div className="space-y-3 flex-1">
-          {options.map(([key, text]) => {
-            const isSelected = selectedOption === key;
-            const disabled = !!selectedOption || question.ended;
-
-            return (
-              <button
-                key={key}
-                id={`answer-btn-${key}`}
-                onClick={() => onAnswer(key)}
-                disabled={disabled}
-                className={`answer-btn p-4 text-sm ${isSelected ? 'selected' : ''}`}
-                aria-pressed={isSelected}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0
-                    ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-navy'}`}>
-                    {key}
-                  </span>
-                  <span>{text}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Status banner */}
-        {question.ended ? (
-          <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-center animate-fade-in shadow-sm">
-            <div className="flex items-center justify-center gap-2 text-navy font-bold text-sm mb-1">
-              <span>✓</span>
-              <span>Question completed</span>
-            </div>
-            <p className="text-xs text-muted mb-3 font-medium">
-              Waiting for host to start next question…
-            </p>
-            <div className="flex justify-center">
-              <LoadingDots />
-            </div>
-          </div>
-        ) : selectedOption ? (
-          <div className="mt-4 text-center animate-fade-in">
-            <div className="inline-flex items-center gap-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-full px-4 py-2 text-sm font-semibold">
-              ✓ Answer recorded — waiting for other players…
-            </div>
-          </div>
-        ) : null}
-      </div>
+      {/* Subtle Mobile In-Game Footer */}
+      <footer className="w-full py-2.5 px-3 text-center border-t border-slate-200/50 bg-white/40 text-[11px] text-slate-400">
+        Developer @Bethesda Baptist Church
+      </footer>
     </div>
   );
 };
 
 const EndedScreen = ({ name, finalData, myRank }) => (
-  <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 text-center">
-    <div className="w-full max-w-sm animate-slide-up">
-      <div className="text-6xl mb-4">🎉</div>
-      <h1 className="text-3xl font-bold text-navy mb-2">Quiz Complete!</h1>
-      <p className="text-muted mb-4">Thank you for participating, {name}!</p>
+  <div className="min-h-screen bg-surface flex flex-col justify-between">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center">
+      <div className="w-full max-w-sm animate-slide-up">
+        <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">🎉</div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-navy mb-2">Quiz Complete!</h1>
+        <p className="text-muted text-sm mb-4">Thank you for participating, {name}!</p>
 
-      {/* Individual player result */}
-      {myRank && (
-        <div className="bg-primary-50 border-2 border-primary-300 rounded-2xl p-4 mb-5">
-          <p className="text-xs font-bold text-primary-700 uppercase tracking-wider">Your Final Result</p>
-          <p className="text-3xl font-black text-navy mt-1">Rank #{myRank.rank}</p>
-          <p className="text-xl font-bold text-primary-600 mt-1">{myRank.total_score} points</p>
-        </div>
-      )}
+        {/* Individual player result */}
+        {myRank && (
+          <div className="bg-primary-50 border-2 border-primary-300 rounded-2xl p-4 sm:p-5 mb-5 shadow-sm">
+            <p className="text-xs font-bold text-primary-700 uppercase tracking-wider">Your Final Result</p>
+            <p className="text-3xl sm:text-4xl font-black text-navy mt-1">Rank #{myRank.rank}</p>
+            <p className="text-lg sm:text-xl font-bold text-primary-600 mt-1">{myRank.total_score} points</p>
+          </div>
+        )}
 
-      {finalData?.top3?.length > 0 && (
-        <div className="card mb-4">
-          <p className="text-xs text-muted font-semibold uppercase tracking-wider mb-3">Top 3</p>
-          {finalData.top3.map((p, i) => (
-            <div key={i} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-              <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-              <span className="font-semibold text-navy flex-1 text-left">{p.name}</span>
-              <span className="font-bold text-primary-600">{p.total_score} pts</span>
-            </div>
-          ))}
-        </div>
-      )}
+        {finalData?.top3?.length > 0 && (
+          <div className="card mb-4 p-4 shadow-sm">
+            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-3">Top 3 Winners</p>
+            {finalData.top3.map((p, i) => (
+              <div key={i} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                <span className="text-xl">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                <span className="font-semibold text-navy flex-1 text-left truncate">{p.name}</span>
+                <span className="font-bold text-primary-600 font-mono">{p.total_score} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
 
-      <button
-        onClick={() => {
-          localStorage.removeItem('quizCode');
-          localStorage.removeItem('sessionId');
-          localStorage.removeItem('playerName');
-          window.location.href = '/join';
-        }}
-        className="btn-primary w-full"
-      >
-        Play Again
-      </button>
+        <button
+          onClick={() => {
+            localStorage.removeItem('quizCode');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('playerName');
+            window.location.href = '/join';
+          }}
+          className="btn-primary btn-lg w-full font-bold shadow-md"
+        >
+          Play Again
+        </button>
+      </div>
     </div>
+
+    <Footer />
   </div>
 );
 

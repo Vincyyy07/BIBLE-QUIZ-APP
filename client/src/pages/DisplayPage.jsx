@@ -107,6 +107,10 @@ const DisplayPage = () => {
           <QRCodeCard quizCode={quizCode} size={240} className="shadow-xl" />
         </div>
       </div>
+
+      <div className="text-center py-4 text-xs font-medium text-slate-400">
+        Developer @Bethesda Baptist Church • Bible Quiz Platform
+      </div>
     </div>
   );
 };
@@ -249,6 +253,10 @@ const FinalScreen = ({ quizTitle, leaderboard }) => {
             ))}
           </div>
         )}
+
+        <div className="text-center py-4 text-xs font-medium text-slate-400 mt-6">
+          Developer @Bethesda Baptist Church • Bible Quiz Platform
+        </div>
       </div>
     </div>
   );
