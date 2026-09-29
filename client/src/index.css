@@ -106,21 +106,28 @@
   /* ── Answer option buttons (participant) ─────── */
   .answer-btn {
     @apply w-full text-left font-semibold rounded-xl border-2 border-border bg-white
-           transition-all duration-150 cursor-pointer select-none
-           focus:outline-none focus:ring-2 focus:ring-primary-500
+           transition-all duration-150 cursor-pointer select-none outline-none
            active:scale-[0.98];
   }
-  .answer-btn:hover:not(:disabled) {
-    @apply border-primary-500 bg-primary-50;
+  @media (hover: hover) and (pointer: fine) {
+    .answer-btn:hover:not(:disabled) {
+      @apply border-primary-500 bg-primary-50;
+    }
+  }
+  .answer-btn:focus-visible {
+    @apply ring-2 ring-primary-500;
   }
   .answer-btn.selected {
-    @apply border-primary-600 bg-primary-600 text-white;
+    @apply border-primary-600 bg-primary-600 text-white shadow-sm;
   }
   .answer-btn.correct {
     @apply border-success bg-green-600 text-white;
   }
   .answer-btn.incorrect {
     @apply border-danger bg-red-600 text-white;
+  }
+  .answer-btn:disabled:not(.selected) {
+    @apply opacity-60 cursor-not-allowed;
   }
   .answer-btn:disabled {
     @apply cursor-not-allowed;

@@ -204,10 +204,11 @@ const PlayPage = () => {
   }
 
   if (view === VIEWS.QUESTION || view === VIEWS.ANSWERED) {
-    const currentSelectedOption = question?.questionId ? (selectedAnswers[question.questionId] || null) : null;
+    const qKey = question?.questionId || question?.id || question?.questionNumber;
+    const currentSelectedOption = qKey ? (selectedAnswers[qKey] || null) : null;
     return (
       <QuestionScreen
-        key={`q-${question?.questionId || question?.questionNumber}`}
+        key={`q-screen-${qKey}`}
         question={question}
         selectedOption={currentSelectedOption}
         onAnswer={handleAnswer}
@@ -284,6 +285,14 @@ const LoadingDots = () => (
 const QuestionScreen = ({ question, selectedOption, onAnswer, paused, view, name, myRank }) => {
   if (!question) return null;
 
+  // Clear any residual browser focus on mobile/desktop when question changes
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+  }, [question?.questionId, question?.questionNumber]);
+
+  const qId = question?.questionId || question?.id || question?.questionNumber || 'q';
   const options = question.options
     ? Object.entries(question.options)
     : [['A', question.optionA], ['B', question.optionB], ['C', question.optionC], ['D', question.optionD]];
@@ -345,9 +354,12 @@ const QuestionScreen = ({ question, selectedOption, onAnswer, paused, view, name
 
               return (
                 <button
-                  key={key}
-                  id={`answer-btn-${key}`}
-                  onClick={() => onAnswer(key)}
+                  key={`${qId}-${key}`}
+                  id={`btn-${qId}-${key}`}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    onAnswer(key);
+                  }}
                   disabled={disabled}
                   className={`answer-btn p-3.5 sm:p-4 text-sm sm:text-base font-semibold min-h-[52px] sm:min-h-[56px] ${
                     isSelected ? 'selected' : ''
