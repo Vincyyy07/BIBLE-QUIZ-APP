@@ -1,5 +1,5 @@
 const { Server } = require('socket.io');
-const { registerHostHandlers } = require('./hostHandlers');
+const { registerHostHandlers, recoverActiveQuizzes } = require('./hostHandlers');
 const { registerPlayerHandlers } = require('./playerHandlers');
 const logger = require('../utils/logger');
 
@@ -42,6 +42,9 @@ const initializeSocket = (httpServer) => {
       logger.info('Display joined', { quizCode, socketId: socket.id });
     });
   });
+
+  // Automatically restore active quizzes & timers across server restarts (Railway)
+  recoverActiveQuizzes(io);
 
   return io;
 };

@@ -5,6 +5,7 @@ const {
   updateQuiz, duplicateQuestion,
 } = require('../services/quizService');
 const { signHostToken } = require('../middleware/authMiddleware');
+const { query } = require('../models/db');
 const logger = require('../utils/logger');
 
 const handleValidationErrors = (req, res) => {
@@ -13,6 +14,36 @@ const handleValidationErrors = (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
   return null;
+};
+
+/**
+ * Verify quiz exists and is owned by the authenticated user.
+ */
+const checkQuizOwnership = async (quizId, userId) => {
+  const res = await query('SELECT id, user_id FROM quizzes WHERE id = $1', [quizId]);
+  if (!res.rows[0]) return { ok: false, status: 404, error: 'Quiz not found' };
+  if (res.rows[0].user_id && userId && res.rows[0].user_id !== userId) {
+    return { ok: false, status: 403, error: 'Permission denied: You do not own this quiz.' };
+  }
+  return { ok: true, quiz: res.rows[0] };
+};
+
+/**
+ * Verify question exists and its quiz is owned by the authenticated user.
+ */
+const checkQuestionOwnership = async (questionId, userId) => {
+  const res = await query(
+    `SELECT q.id, q.quiz_id, qz.user_id 
+     FROM questions q 
+     JOIN quizzes qz ON qz.id = q.quiz_id 
+     WHERE q.id = $1`,
+    [questionId]
+  );
+  if (!res.rows[0]) return { ok: false, status: 404, error: 'Question not found' };
+  if (res.rows[0].user_id && userId && res.rows[0].user_id !== userId) {
+    return { ok: false, status: 403, error: 'Permission denied: You do not own this quiz.' };
+  }
+  return { ok: true, question: res.rows[0] };
 };
 
 // POST /api/quizzes
@@ -56,10 +87,14 @@ const getQuizByCodeHandler = async (req, res) => {
   }
 };
 
-// GET /api/quizzes/:id  (host — returns full quiz with questions)
+// GET /api/quizzes/:id  (host — returns full quiz with questions, authenticated & owner verified)
 const getQuizByIdHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const quiz = await getQuizWithQuestions(quizId);
     if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
 
@@ -78,6 +113,10 @@ const updateQuizHandler = async (req, res) => {
   if (err) return;
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const updated = await updateQuiz(quizId, req.body);
     res.json(updated);
   } catch (err) {
@@ -92,6 +131,10 @@ const addQuestionHandler = async (req, res) => {
   if (err) return;
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const q = await addQuestion(quizId, {
       questionText: req.body.questionText,
       optionA: req.body.optionA,
@@ -114,9 +157,9 @@ const updateQuestionHandler = async (req, res) => {
   const err = handleValidationErrors(req, res);
   if (err) return;
   try {
-    const { query } = require('../models/db');
-    const qRes = await query(`SELECT quiz_id FROM questions WHERE id = $1`, [req.params.id]);
-    if (!qRes.rows[0]) return res.status(404).json({ error: 'Question not found' });
+    const userId = req.user?.userId;
+    const owner = await checkQuestionOwnership(req.params.id, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
 
     const fields = {};
     if (req.body.questionText !== undefined) fields.question_text = req.body.questionText;
@@ -139,11 +182,11 @@ const updateQuestionHandler = async (req, res) => {
 // DELETE /api/questions/:id
 const deleteQuestionHandler = async (req, res) => {
   try {
-    const { query } = require('../models/db');
-    const qRes = await query(`SELECT quiz_id FROM questions WHERE id = $1`, [req.params.id]);
-    if (!qRes.rows[0]) return res.status(404).json({ error: 'Question not found' });
+    const userId = req.user?.userId;
+    const owner = await checkQuestionOwnership(req.params.id, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
 
-    await deleteQuestion(req.params.id, qRes.rows[0].quiz_id);
+    await deleteQuestion(req.params.id, owner.question.quiz_id);
     res.json({ success: true });
   } catch (err) {
     logger.error('Delete question error', { error: err.message });
@@ -155,6 +198,10 @@ const deleteQuestionHandler = async (req, res) => {
 const reorderQuestionsHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const { orderedIds } = req.body;
     if (!Array.isArray(orderedIds)) return res.status(400).json({ error: 'orderedIds must be an array' });
     await reorderQuestions(quizId, orderedIds);
@@ -168,10 +215,11 @@ const reorderQuestionsHandler = async (req, res) => {
 // POST /api/questions/:id/duplicate
 const duplicateQuestionHandler = async (req, res) => {
   try {
-    const { query } = require('../models/db');
-    const qRes = await query(`SELECT quiz_id FROM questions WHERE id = $1`, [req.params.id]);
-    if (!qRes.rows[0]) return res.status(404).json({ error: 'Question not found' });
-    const dup = await duplicateQuestion(req.params.id, qRes.rows[0].quiz_id);
+    const userId = req.user?.userId;
+    const owner = await checkQuestionOwnership(req.params.id, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
+    const dup = await duplicateQuestion(req.params.id, owner.question.quiz_id);
     res.status(201).json(dup);
   } catch (err) {
     logger.error('Duplicate question error', { error: err.message });
@@ -179,10 +227,14 @@ const duplicateQuestionHandler = async (req, res) => {
   }
 };
 
-// GET /api/quizzes/:id/status  — update quiz status to WAITING (ready to accept participants)
+// POST /api/quizzes/:id/waiting
 const setWaitingHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const { updateQuizStatus } = require('../services/quizService');
     await updateQuizStatus(quizId, 'WAITING');
     res.json({ success: true, status: 'WAITING' });
@@ -225,6 +277,10 @@ const getAllQuizzesHandler = async (req, res) => {
 const deleteQuizHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const { deleteQuiz } = require('../services/quizService');
     await deleteQuiz(quizId);
     res.json({ success: true, message: 'Quiz deleted successfully' });
@@ -238,8 +294,11 @@ const deleteQuizHandler = async (req, res) => {
 const duplicateQuizHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
-    const { duplicateQuiz } = require('../services/quizService');
     const userId = req.user ? req.user.userId : null;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
+    const { duplicateQuiz } = require('../services/quizService');
     const dup = await duplicateQuiz(quizId, userId);
     res.status(201).json(dup);
   } catch (err) {
@@ -252,6 +311,10 @@ const duplicateQuizHandler = async (req, res) => {
 const resetQuizHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const { resetQuiz } = require('../services/quizService');
     const reset = await resetQuiz(quizId);
     res.json(reset);
@@ -267,4 +330,5 @@ module.exports = {
   deleteQuestionHandler, reorderQuestionsHandler, duplicateQuestionHandler,
   setWaitingHandler, createQuizValidation, addQuestionValidation,
   getAllQuizzesHandler, deleteQuizHandler, duplicateQuizHandler, resetQuizHandler,
+  checkQuizOwnership, checkQuestionOwnership,
 };

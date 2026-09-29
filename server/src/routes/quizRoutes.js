@@ -15,18 +15,18 @@ const { getResultsHandler, getLeaderboardHandler, exportResultsHandler } = requi
 router.get('/code/:code', joinLimiter, getQuizByCodeHandler);
 router.get('/:id/leaderboard', getLeaderboardHandler);
 
-// Host routes
+// Host-only protected routes (requires valid user login & ownership check)
 router.get('/', verifyUserToken, getAllQuizzesHandler);
 router.post('/', verifyUserToken, createLimiter, createQuizValidation, createQuizHandler);
-router.get('/:id', getQuizByIdHandler);
-router.put('/:id', updateQuizHandler);
-router.delete('/:id', deleteQuizHandler);
+router.get('/:id', verifyUserToken, getQuizByIdHandler);
+router.put('/:id', verifyUserToken, updateQuizHandler);
+router.delete('/:id', verifyUserToken, deleteQuizHandler);
 router.post('/:id/duplicate', verifyUserToken, duplicateQuizHandler);
-router.post('/:id/reset', resetQuizHandler);
-router.post('/:id/waiting', setWaitingHandler);
-router.post('/:id/questions', addQuestionValidation, addQuestionHandler);
-router.post('/:id/questions/reorder', reorderQuestionsHandler);
-router.get('/:id/results', getResultsHandler);
-router.get('/:id/export', exportResultsHandler);
+router.post('/:id/reset', verifyUserToken, resetQuizHandler);
+router.post('/:id/waiting', verifyUserToken, setWaitingHandler);
+router.post('/:id/questions', verifyUserToken, addQuestionValidation, addQuestionHandler);
+router.post('/:id/questions/reorder', verifyUserToken, reorderQuestionsHandler);
+router.get('/:id/results', verifyUserToken, getResultsHandler);
+router.get('/:id/export', verifyUserToken, exportResultsHandler);
 
 module.exports = router;

@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { verifyHostToken } = require('../middleware/authMiddleware');
+const { verifyUserToken } = require('../middleware/authMiddleware');
 const { updateQuestionHandler, deleteQuestionHandler, duplicateQuestionHandler, addQuestionValidation } = require('../controllers/quizController');
 
-// All question-level routes require host auth
-router.put('/:id', verifyHostToken, addQuestionValidation, updateQuestionHandler);
-router.delete('/:id', verifyHostToken, deleteQuestionHandler);
-router.post('/:id/duplicate', verifyHostToken, duplicateQuestionHandler);
+// All question-level routes require authenticated user
+router.put('/:id', verifyUserToken, addQuestionValidation, updateQuestionHandler);
+router.delete('/:id', verifyUserToken, deleteQuestionHandler);
+router.post('/:id/duplicate', verifyUserToken, duplicateQuestionHandler);
 
 module.exports = router;

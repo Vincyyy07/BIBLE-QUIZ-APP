@@ -38,7 +38,18 @@ const authorizeHost = (socket, hostToken, expectedQuizId) => {
 const handleQuestionEnd = async (io, quizId, questionId, quizCode, allAnswered = false) => {
   try {
     const qId = parseInt(quizId, 10);
-    // Clear any pending timer immediately
+
+    // 1. One-shot gate: immediately prevent duplicate concurrent executions
+    const state = activeQuizState.get(qId);
+    if (state?.ended) {
+      return;
+    }
+    if (state) {
+      state.ended = true;
+      activeQuizState.set(qId, state);
+    }
+
+    // 2. Clear any pending timer immediately
     if (activeTimers.has(qId)) {
       clearTimeout(activeTimers.get(qId));
       activeTimers.delete(qId);
@@ -46,18 +57,11 @@ const handleQuestionEnd = async (io, quizId, questionId, quizCode, allAnswered =
 
     await updateQuizStatus(qId, 'QUESTION_ENDED');
 
-    // Score all answers in database
+    // 3. Score all answers in database
     const scoringResult = await processQuestionResults(qId, questionId);
 
     // Fetch updated live top 10 standings
     const top10 = await getTopN(qId, 10);
-
-    // Update in-memory state
-    const state = activeQuizState.get(qId);
-    if (state) {
-      state.ended = true;
-      activeQuizState.set(qId, state);
-    }
 
     // 1. Send complete analytics & standings to Host control room
     io.to(`host:${qId}`).emit('question_ended', {
@@ -278,19 +282,21 @@ const registerHostHandlers = (io, socket) => {
     const state = activeQuizState.get(parseInt(quizId, 10));
     if (!state || !state.paused) return;
 
-    const newEndsAt = new Date(Date.now() + state.remainingMs);
+    const remainingMs = Math.max(1000, state.remainingMs || 0);
+    const newEndsAt = new Date(Date.now() + remainingMs);
     state.paused = false;
     state.endsAt = newEndsAt.toISOString();
     state.remainingMs = null;
+    state.ended = false;
     activeQuizState.set(parseInt(quizId, 10), state);
 
     // Update DB
     await query(`UPDATE questions SET ends_at = $1 WHERE id = $2`, [newEndsAt, state.questionId]);
 
-    // Set new timer
+    // Set new timer with preserved remainingMs
     const timer = setTimeout(() => {
       handleQuestionEnd(io, parseInt(quizId, 10), state.questionId, state.quizCode);
-    }, state.remainingMs);
+    }, remainingMs);
     activeTimers.set(parseInt(quizId, 10), timer);
 
     const quizRes = await query(`SELECT code FROM quizzes WHERE id = $1`, [quizId]);
@@ -449,4 +455,91 @@ const startQuestion = async (io, socket, quizId, quizCode, questions, index, hos
   });
 };
 
-module.exports = { registerHostHandlers, handleQuestionEnd, activeQuizState, activeTimers };
+/**
+ * Automatically recover active quiz state and timers if the server restarts during a live quiz.
+ */
+const recoverActiveQuizzes = async (io) => {
+  try {
+    const liveQuizzesRes = await query(
+      `SELECT id, code, current_question_index, status
+       FROM quizzes
+       WHERE status IN ('LIVE', 'QUESTION_ENDED')`
+    );
+
+    if (liveQuizzesRes.rows.length === 0) return;
+
+    logger.info(`Server restart recovery: found ${liveQuizzesRes.rows.length} active quiz(zes)`);
+
+    for (const quiz of liveQuizzesRes.rows) {
+      const qRes = await query(
+        `SELECT id, question_number, question_text, option_a, option_b, option_c, option_d,
+                duration_seconds, points, started_at, ends_at
+         FROM questions
+         WHERE quiz_id = $1
+         ORDER BY question_number`,
+        [quiz.id]
+      );
+      const questions = qRes.rows;
+      const currentQ = questions[quiz.current_question_index];
+      if (!currentQ) continue;
+
+      const qId = parseInt(quiz.id, 10);
+      const now = Date.now();
+      const endsAtDate = currentQ.ends_at ? new Date(currentQ.ends_at) : null;
+      const endsAtMs = endsAtDate ? endsAtDate.getTime() : 0;
+      const remainingMs = endsAtMs - now;
+
+      if (quiz.status === 'LIVE' && remainingMs > 0) {
+        // Still active! Reconstruct in-memory state and reschedule timer
+        activeQuizState.set(qId, {
+          questionId: currentQ.id,
+          questionNumber: currentQ.question_number,
+          questionText: currentQ.question_text,
+          options: { A: currentQ.option_a, B: currentQ.option_b, C: currentQ.option_c, D: currentQ.option_d },
+          endsAt: endsAtDate.toISOString(),
+          totalQuestions: questions.length,
+          paused: false,
+          quizCode: quiz.code,
+          ended: false,
+        });
+
+        const timer = setTimeout(() => {
+          handleQuestionEnd(io, qId, currentQ.id, quiz.code, false);
+        }, remainingMs);
+        activeTimers.set(qId, timer);
+
+        logger.info('Recovered LIVE quiz timer across server restart', {
+          quizId: qId,
+          code: quiz.code,
+          questionNumber: currentQ.question_number,
+          remainingMs,
+        });
+      } else if (quiz.status === 'LIVE' && remainingMs <= 0) {
+        // Expired while server was offline -> gracefully score and close
+        logger.info('Gracefully scoring question that expired during server restart', {
+          quizId: qId,
+          code: quiz.code,
+          questionNumber: currentQ.question_number,
+        });
+        await handleQuestionEnd(io, qId, currentQ.id, quiz.code, false);
+      } else if (quiz.status === 'QUESTION_ENDED') {
+        // In-between questions state
+        activeQuizState.set(qId, {
+          questionId: currentQ.id,
+          questionNumber: currentQ.question_number,
+          questionText: currentQ.question_text,
+          options: { A: currentQ.option_a, B: currentQ.option_b, C: currentQ.option_c, D: currentQ.option_d },
+          endsAt: endsAtDate ? endsAtDate.toISOString() : new Date().toISOString(),
+          totalQuestions: questions.length,
+          paused: false,
+          quizCode: quiz.code,
+          ended: true,
+        });
+      }
+    }
+  } catch (err) {
+    logger.error('Error recovering active quizzes on startup', { error: err.message });
+  }
+};
+
+module.exports = { registerHostHandlers, handleQuestionEnd, recoverActiveQuizzes, activeQuizState, activeTimers };

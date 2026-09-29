@@ -149,30 +149,22 @@ const registerPlayerHandlers = (io, socket) => {
     const option = selectedOption.toUpperCase();
 
     try {
-      // 1. Check active question in memory first for zero-latency validation
+      // 1. High-speed in-memory active question & timing verification (zero DB read overhead)
       const state = activeQuizState.get(socket.quizId);
-      let endsAt = state?.currentQuestion?.ends_at;
 
-      if (!endsAt) {
-        // Fallback to database if memory state is missing
-        const qRes = await query(
-          `SELECT q.status, qu.ends_at 
-           FROM quizzes q 
-           JOIN questions qu ON qu.quiz_id = q.id 
-           WHERE q.id = $1 AND qu.id = $2`,
-          [socket.quizId, questionId]
-        );
-        if (!qRes.rows[0]) {
-          return emitError(socket, 'INVALID_QUESTION', 'Invalid question ID.');
-        }
-        if (qRes.rows[0].status !== 'LIVE') {
-          return emitError(socket, 'NOT_LIVE', 'Quiz is not currently active.');
-        }
-        endsAt = qRes.rows[0].ends_at;
+      if (!state) {
+        return emitError(socket, 'NO_ACTIVE_QUESTION', 'No active question currently in progress.');
       }
 
-      // 2. Server-authoritative time check
-      if (new Date() > new Date(endsAt)) {
+      if (parseInt(state.questionId, 10) !== parseInt(questionId, 10)) {
+        return emitError(socket, 'INVALID_QUESTION', 'This is not the active question.');
+      }
+
+      if (state.paused) {
+        return emitError(socket, 'QUIZ_PAUSED', 'Quiz is currently paused.');
+      }
+
+      if (state.ended || Date.now() > new Date(state.endsAt).getTime()) {
         return emitError(socket, 'TIME_UP', "Time's up. Your answer was not recorded.");
       }
 

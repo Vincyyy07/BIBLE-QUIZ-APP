@@ -4,10 +4,16 @@ const { query } = require('../models/db');
 const { Parser } = require('json2csv');
 const logger = require('../utils/logger');
 
-// GET /api/quizzes/:id/results  (host only)
+const { checkQuizOwnership } = require('./quizController');
+
+// GET /api/quizzes/:id/results  (host only, authenticated & owner verified)
 const getResultsHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const results = await getFinalResults(quizId);
     res.json(results);
   } catch (err) {
@@ -35,10 +41,14 @@ const getLeaderboardHandler = async (req, res) => {
   }
 };
 
-// GET /api/quizzes/:id/export  (CSV export, host only)
+// GET /api/quizzes/:id/export  (CSV export, host only, authenticated & owner verified)
 const exportResultsHandler = async (req, res) => {
   try {
     const quizId = parseInt(req.params.id, 10);
+    const userId = req.user?.userId;
+    const owner = await checkQuizOwnership(quizId, userId);
+    if (!owner.ok) return res.status(owner.status).json({ error: owner.error });
+
     const results = await getFinalResults(quizId);
     const quiz = await getQuizById(quizId);
 
