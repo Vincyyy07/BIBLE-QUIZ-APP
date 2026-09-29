@@ -12,8 +12,7 @@ const Footer = ({ className = '' }) => {
         <div className="flex items-center gap-1.5 flex-wrap justify-center font-medium">
           <span>Developed by</span>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200/60 font-semibold shadow-2xs">
-            <span>💻</span>
-            <span>Developer @Bethesda Baptist Church</span>
+            <span>@Bethesda Baptist Church</span>
           </span>
         </div>
 
