@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS answers (
   selected_answer  CHAR(1) CHECK (selected_answer IN ('A','B','C','D')),
   is_correct       BOOLEAN,
   points_awarded   INTEGER DEFAULT 0,
+  response_time_seconds NUMERIC DEFAULT 0,
   submitted_at     TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(question_id, participant_id)
 );

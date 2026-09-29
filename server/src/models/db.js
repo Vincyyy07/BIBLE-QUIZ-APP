@@ -34,4 +34,17 @@ const query = async (text, params) => {
 // Helper: get a single client from the pool for transactions
 const getClient = () => pool.connect();
 
-module.exports = { query, getClient, pool };
+// Auto-verify and migrate database columns on startup
+const initDb = async () => {
+  try {
+    await pool.query(`ALTER TABLE answers ADD COLUMN IF NOT EXISTS response_time_seconds NUMERIC DEFAULT 0;`);
+    logger.info('Database schema verified: answers.response_time_seconds ensured.');
+  } catch (err) {
+    logger.warn('Database schema verification note:', { error: err.message });
+  }
+};
+
+initDb();
+
+module.exports = { query, getClient, pool, initDb };
+

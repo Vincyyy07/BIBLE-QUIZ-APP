@@ -1,4 +1,5 @@
 const { query } = require('../models/db');
+const { recalculateQuizScores } = require('./scoringService');
 
 /**
  * Get full leaderboard for a quiz (for host and final projector screen)
@@ -70,6 +71,13 @@ const getLeaderboardPayload = async (quizId) => {
  * Get final results with statistics
  */
 const getFinalResults = async (quizId) => {
+  // Ensure all answers are scored and cumulative ranks are freshly computed
+  try {
+    await recalculateQuizScores(quizId);
+  } catch (err) {
+    // Continue even if recalculation encounters an issue
+  }
+
   const leaderboard = await getFullLeaderboard(quizId);
 
   const statsRes = await query(
