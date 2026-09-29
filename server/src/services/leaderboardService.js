@@ -74,14 +74,9 @@ const getFinalResults = async (quizId) => {
 
   const statsRes = await query(
     `SELECT
-       COUNT(DISTINCT p.id) AS total_participants,
-       COUNT(DISTINCT a.participant_id) AS participated,
-       COUNT(q.id) AS total_questions
-     FROM quizzes qz
-     LEFT JOIN participants p ON p.quiz_id = qz.id
-     LEFT JOIN answers a ON a.quiz_id = qz.id
-     LEFT JOIN questions q ON q.quiz_id = qz.id
-     WHERE qz.id = $1`,
+       (SELECT COUNT(*)::int FROM participants WHERE quiz_id = $1) AS total_participants,
+       (SELECT COUNT(DISTINCT participant_id)::int FROM answers WHERE quiz_id = $1) AS participated,
+       (SELECT COUNT(*)::int FROM questions WHERE quiz_id = $1) AS total_questions`,
     [quizId]
   );
 

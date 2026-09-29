@@ -27,45 +27,36 @@ const processQuestionResults = async (quizId, questionId) => {
     const { correct_answer, points, started_at, ends_at } = qRes.rows[0];
 
     // 1. Bulk score all answers for this question in a single set-based query
+    // Case-insensitive, trimmed, and guaranteed accurate
     await client.query(
       `UPDATE answers
        SET
-         is_correct = (selected_answer = $2 AND submitted_at <= $4),
-         points_awarded = CASE WHEN (selected_answer = $2 AND submitted_at <= $4) THEN $3 ELSE 0 END,
-         response_time_seconds = GREATEST(0.1, ROUND(EXTRACT(EPOCH FROM (submitted_at - COALESCE($5, submitted_at)))::numeric, 2))
+         is_correct = (UPPER(TRIM(selected_answer)) = UPPER(TRIM($2))),
+         points_awarded = CASE WHEN UPPER(TRIM(selected_answer)) = UPPER(TRIM($2)) THEN $3 ELSE 0 END,
+         response_time_seconds = GREATEST(0.1, ROUND(EXTRACT(EPOCH FROM (submitted_at - COALESCE($4, submitted_at)))::numeric, 2))
        WHERE question_id = $1`,
-      [questionId, correct_answer, points, ends_at, started_at]
+      [questionId, correct_answer, points, started_at]
     );
 
-    // 2. Bulk upsert into scores table for all participants who answered
+    // 2. Compute exact cumulative totals for all participants from their submitted answers
     await client.query(
       `INSERT INTO scores (quiz_id, participant_id, total_score, correct_answers, total_time_seconds, last_correct_at)
        SELECT
          $1,
-         a.participant_id,
-         a.points_awarded,
-         CASE WHEN a.is_correct THEN 1 ELSE 0 END,
-         COALESCE(a.response_time_seconds, 0),
-         CASE WHEN a.is_correct THEN a.submitted_at ELSE NULL END
-       FROM answers a
-       WHERE a.question_id = $2
-       ON CONFLICT (quiz_id, participant_id) DO UPDATE SET
-         total_score        = scores.total_score + EXCLUDED.total_score,
-         correct_answers    = scores.correct_answers + EXCLUDED.correct_answers,
-         total_time_seconds = scores.total_time_seconds + EXCLUDED.total_time_seconds,
-         last_correct_at    = CASE
-           WHEN EXCLUDED.correct_answers > 0 THEN EXCLUDED.last_correct_at
-           ELSE scores.last_correct_at
-         END`,
-      [quizId, questionId]
-    );
-
-    // Ensure all participants have a scores row
-    await client.query(
-      `INSERT INTO scores (quiz_id, participant_id, total_score, correct_answers, total_time_seconds)
-       SELECT $1, p.id, 0, 0, 0 FROM participants p
+         p.id,
+         COALESCE(SUM(a.points_awarded), 0),
+         COALESCE(COUNT(a.id) FILTER (WHERE a.is_correct = true), 0),
+         COALESCE(ROUND(SUM(a.response_time_seconds)::numeric, 2), 0),
+         MAX(CASE WHEN a.is_correct = true THEN a.submitted_at ELSE NULL END)
+       FROM participants p
+       LEFT JOIN answers a ON a.participant_id = p.id AND a.quiz_id = $1
        WHERE p.quiz_id = $1
-       ON CONFLICT (quiz_id, participant_id) DO NOTHING`,
+       GROUP BY p.id
+       ON CONFLICT (quiz_id, participant_id) DO UPDATE SET
+         total_score        = EXCLUDED.total_score,
+         correct_answers    = EXCLUDED.correct_answers,
+         total_time_seconds = EXCLUDED.total_time_seconds,
+         last_correct_at    = EXCLUDED.last_correct_at`,
       [quizId]
     );
 

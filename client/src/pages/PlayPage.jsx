@@ -40,7 +40,7 @@ const PlayPage = () => {
   const [participantCount, setParticipantCount] = useState(0);
   const [joinedData, setJoinedData] = useState(null);
   const [question, setQuestion] = useState(null);
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [selectedAnswers, setSelectedAnswers] = useState({}); // { [questionId]: 'A' }
   const [myRank, setMyRank] = useState(null);
   const [finalData, setFinalData] = useState(null);
   const [error, setError] = useState('');
@@ -86,7 +86,10 @@ const PlayPage = () => {
             alreadyAnswered: data.currentState.alreadyAnswered || null,
           });
           if (data.currentState.alreadyAnswered) {
-            setSelectedOption(data.currentState.alreadyAnswered);
+            setSelectedAnswers((prev) => ({
+              ...prev,
+              [data.currentState.questionId]: data.currentState.alreadyAnswered,
+            }));
             setView(VIEWS.ANSWERED);
           } else {
             setView(VIEWS.QUESTION);
@@ -117,13 +120,19 @@ const PlayPage = () => {
 
     on(EVENTS.QUESTION_STARTED, (data) => {
       setQuestion(data);
-      setSelectedOption(data.alreadyAnswered || null);
-      setView(data.alreadyAnswered ? VIEWS.ANSWERED : VIEWS.QUESTION);
+      if (data.alreadyAnswered) {
+        setSelectedAnswers((prev) => ({ ...prev, [data.questionId]: data.alreadyAnswered }));
+        setView(VIEWS.ANSWERED);
+      } else {
+        setView(VIEWS.QUESTION);
+      }
       setPaused(false);
     });
 
-    on(EVENTS.ANSWER_ACCEPTED, ({ selectedOption: opt }) => {
-      setSelectedOption(opt);
+    on(EVENTS.ANSWER_ACCEPTED, ({ questionId: qId, selectedOption: opt }) => {
+      if (qId) {
+        setSelectedAnswers((prev) => ({ ...prev, [qId]: opt }));
+      }
       setView(VIEWS.ANSWERED);
     });
 
@@ -170,11 +179,13 @@ const PlayPage = () => {
 
   // Submit answer
   const handleAnswer = (option) => {
-    if (selectedOption || !question || question.ended) return;
-    setSelectedOption(option);
+    if (!question || question.ended) return;
+    const qId = question.questionId;
+    if (selectedAnswers[qId]) return;
+    setSelectedAnswers((prev) => ({ ...prev, [qId]: option }));
     socket.emit(EVENTS.SUBMIT_ANSWER, {
       quizCode,
-      questionId: question.questionId,
+      questionId: qId,
       selectedOption: option,
       sessionId,
     });
@@ -193,10 +204,12 @@ const PlayPage = () => {
   }
 
   if (view === VIEWS.QUESTION || view === VIEWS.ANSWERED) {
+    const currentSelectedOption = question?.questionId ? (selectedAnswers[question.questionId] || null) : null;
     return (
       <QuestionScreen
+        key={`q-${question?.questionId || question?.questionNumber}`}
         question={question}
-        selectedOption={selectedOption}
+        selectedOption={currentSelectedOption}
         onAnswer={handleAnswer}
         paused={paused}
         view={view}

@@ -22,7 +22,7 @@ const HostLobby = ({ quiz, participantCount, questions, onStart, onBack, onEnter
               ROOM CODE
             </p>
             <p
-              className="text-6xl md:text-7xl font-bold tracking-widest font-mono my-2"
+              className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-wider sm:tracking-widest font-mono my-2 break-all"
               aria-label={`Join code: ${quiz.code}`}
             >
               {quiz.code}
@@ -37,18 +37,18 @@ const HostLobby = ({ quiz, participantCount, questions, onStart, onBack, onEnter
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="card-sm text-center">
-            <p className="text-3xl font-bold text-primary-600">{participantCount}</p>
-            <p className="text-xs text-muted mt-1 font-medium">Participants</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <div className="card-sm text-center p-3 sm:p-4">
+            <p className="text-2xl sm:text-3xl font-bold text-primary-600 font-mono">{participantCount}</p>
+            <p className="text-[11px] sm:text-xs text-muted mt-1 font-medium">Participants</p>
           </div>
-          <div className="card-sm text-center">
-            <p className="text-3xl font-bold text-navy">{questions.length}</p>
-            <p className="text-xs text-muted mt-1 font-medium">Questions</p>
+          <div className="card-sm text-center p-3 sm:p-4">
+            <p className="text-2xl sm:text-3xl font-bold text-navy font-mono">{questions.length}</p>
+            <p className="text-[11px] sm:text-xs text-muted mt-1 font-medium">Questions</p>
           </div>
-          <div className="card-sm text-center flex flex-col items-center justify-center">
+          <div className="card-sm text-center p-3 sm:p-4 flex flex-col items-center justify-center">
             <ConnectionStatus />
-            <p className="text-xs text-muted mt-1 font-medium">Status</p>
+            <p className="text-[11px] sm:text-xs text-muted mt-1 font-medium">Status</p>
           </div>
         </div>
 
